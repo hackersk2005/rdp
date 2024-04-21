@@ -11,17 +11,7 @@ jobs:
     runs-on: self-hosted  # Use the self-hosted runner
 
     steps:
-    # Ngrok setup
-    - name: Download ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
-
-    - name: Extract ngrok
-      run: unzip ngrok.zip
-
-    - name: Authenticate ngrok
-      run: ./ngrok authtoken $NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+    
 
     - name: Enable TS
       run: sudo sysctl -w net.ipv4.tcp_keepalive_time=120
