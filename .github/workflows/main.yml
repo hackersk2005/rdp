@@ -1,39 +1,27 @@
+
+
 name: CI
 
-on: 
-  schedule:
-    - cron: '0 */4 * * *'  # Run every 4 hours
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
 
-    runs-on: self-hosted  # Use the self-hosted runner
+    runs-on: windows-latest
 
     steps:
-    
-
+    - name: Download
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+    - name: Extract
+      run: Expand-Archive ngrok.zip
+    - name: Auth
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
     - name: Enable TS
-      run: sudo sysctl -w net.ipv4.tcp_keepalive_time=120
-
-    - name: Enable Remote Desktop Firewall Rule
-      run: sudo ufw allow 3389/tcp
-
-    - name: Enable User Authentication for RDP
-      run: echo "user_allow_other" | sudo tee -a /etc/fuse.conf
-
-    - name: Set Local User Password
-      run: echo "runneradmin:P@ssw0rd!" | sudo chpasswd
-
-    - name: Create ngrok Tunnel
-      run: ./ngrok tcp 3389
-
-    # Install Ansible
-    - name: Install Ansible
-      run: sudo apt update && sudo apt install -y ansible
-
-    # Run Ansible playbook
-    - name: Run Ansible playbook
-      run: |
-        cd rdp  # Navigate to the rdp directory
-        ansible-playbook main.yml
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+    - name: Create Tunnel
+      run: .\ngrok\ngrok.exe tcp 3389
