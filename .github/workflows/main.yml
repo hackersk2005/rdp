@@ -13,30 +13,34 @@ jobs:
     steps:
     # Ngrok setup
     - name: Download ngrok
-      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
 
     - name: Extract ngrok
-      run: Expand-Archive ngrok.zip
+      run: unzip ngrok.zip
 
     - name: Authenticate ngrok
-      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      run: ./ngrok authtoken $NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
     - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+      run: sudo sysctl -w net.ipv4.tcp_keepalive_time=120
 
     - name: Enable Remote Desktop Firewall Rule
-      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      run: sudo ufw allow 3389/tcp
 
     - name: Enable User Authentication for RDP
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+      run: echo "user_allow_other" | sudo tee -a /etc/fuse.conf
 
     - name: Set Local User Password
-      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+      run: echo "runneradmin:P@ssw0rd!" | sudo chpasswd
 
     - name: Create ngrok Tunnel
-      run: .\ngrok\ngrok.exe tcp 3389
+      run: ./ngrok tcp 3389
+
+    # Install Ansible
+    - name: Install Ansible
+      run: sudo apt update && sudo apt install -y ansible
 
     # Run Ansible playbook
     - name: Run Ansible playbook
